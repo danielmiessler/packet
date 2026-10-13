@@ -1,0 +1,21 @@
+[package]
+name = "packet"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+base64 = "0.23.1"
+block2 = "0.6"
+libc = "0.2.190"
+objc2 = "0.6.5"
+png = "0.18"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+tao = "0.37.1"
+tray-icon = "0.26.1"
+wry = "0.57.0"
+
+[profile.release]
+lto = "thin"
+strip = true

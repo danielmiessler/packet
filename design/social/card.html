@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Packet social preview</title>
+<!-- 1280x640 GitHub social preview. Render: serve the repo root, open /design/social/card.html, capture the top-left 1280x640. -->
+<style>
+  :root {
+    --deep: #0b1a46; --ink: #04081a; --sky: #7aa2f7; --sky-deep: #2a4fb5; --sky-grey: #9db1e8;
+    --bright: #eef2ff; --good: #9ece6a; --fair: #e0af68; --muted: #7c87b2; --brand: #0A4BC4;
+    --ui: "Concourse 3", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    --num: "Concourse 3 Tab", -apple-system, BlinkMacSystemFont, sans-serif;
+    --caps: "Concourse 3 Caps", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mark: "Advocate 54 Wide Reg", "Advocate", -apple-system, sans-serif;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { background: var(--ink); }
+  .card {
+    position: relative; width: 1280px; height: 640px; overflow: hidden;
+    background:
+      radial-gradient(900px 420px at 78% -12%, rgba(10,75,196,.55), transparent 70%),
+      radial-gradient(700px 380px at 8% 118%, rgba(2,52,154,.45), transparent 70%),
+      linear-gradient(160deg, var(--deep) 0%, #081233 55%, var(--ink) 100%);
+    font-family: var(--ui);
+    color: var(--bright); font-variant-numeric: tabular-nums;
+  }
+  .menubar {
+    position: absolute; inset: 0 0 auto 0; height: 36px; padding: 0 28px;
+    display: flex; align-items: center; justify-content: flex-end; gap: 22px;
+    background: rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06);
+    font-size: 17px; color: rgba(245,239,226,.72);
+  }
+  .menubar img { width: 22px; height: 22px; }
+  .brand { position: absolute; top: 62px; right: 72px; display: flex; align-items: center; gap: 18px; }
+  .brand img { width: 96px; height: 96px; }
+  .brand span { font-family: var(--mark); font-size: 44px; letter-spacing: .2em; text-transform: uppercase; }
+  .card::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(122,162,247,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(122,162,247,.07) 1px, transparent 1px);
+    background-size: 32px 32px; -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 75%); }
+  h1 { position: absolute; top: 70px; left: 72px; font-size: 96px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .verdict {
+    position: absolute; top: 190px; left: 72px; display: flex; align-items: center; gap: 14px;
+    padding: 14px 24px 14px 20px; border-radius: 12px;
+    background: rgba(224,175,104,.12); border: 1px solid rgba(224,175,104,.28);
+    font-size: 30px; font-weight: 500; color: var(--bright);
+  }
+  .verdict i { width: 18px; height: 18px; border-radius: 50%; background: var(--fair); flex: none; }
+  .verdict b { font-weight: 700; color: var(--fair); }
+  svg.gates { position: absolute; left: 0; top: 278px; }
+  .labels { position: absolute; left: 0; top: 530px; width: 1280px; height: 80px; }
+  .layer { position: absolute; width: 220px; margin-left: -110px; text-align: center; }
+  .layer .name { display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--caps); font-size: 26px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--sky-grey); }
+  .layer .name i { width: 14px; height: 14px; border-radius: 50%; background: var(--good); }
+  .layer .value { margin-top: 4px; font-family: var(--num); font-size: 36px; font-weight: 600; color: var(--bright); }
+  .layer.fault .name { color: var(--fair); }
+  .layer.fault .name i { background: var(--fair); }
+  .layer.fault .value { color: var(--fair); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Is it the network?</h1>
+  <div class="verdict"><i></i><span><b>DNS is struggling:</b> lookups take 225 ms.</span></div>
+
+  <div class="brand"><img src="../../bundle/AppIcon.svg" alt=""><span>Packet</span></div>
+
+  <!-- Five gates (written by gen.ts) in the icon's geometry: vertical sides, top and bottom edges falling 30° to the right. -->
+  <svg class="gates" width="1280" height="240" viewBox="0 0 1280 240" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#fbc65a"/></linearGradient>
+      <linearGradient id="left" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3a93a"/><stop offset="1" stop-color="#e48a22"/></linearGradient>
+      <linearGradient id="right" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c46a1a"/><stop offset="1" stop-color="#9c4c0e"/></linearGradient>
+    </defs>
+    <!-- gates:start -->
+    <ellipse cx="134" cy="219.1" rx="64" ry="9" fill="#01040f" opacity=".55"/>
+    <ellipse cx="392" cy="219.1" rx="64" ry="9" fill="#01040f" opacity=".55"/>
+    <ellipse cx="650" cy="219.1" rx="64" ry="9" fill="#01040f" opacity=".55"/>
+    <ellipse cx="908" cy="238" rx="78" ry="9" fill="#01040f" opacity=".55"/>
+    <ellipse cx="1166" cy="219.1" rx="64" ry="9" fill="#01040f" opacity=".55"/>
+    <g fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="13">
+    <g opacity="0.8"><path d="M83,25 L175,78.1 L175,214.1 L83,161 Z" stroke="#2a4fb5"/></g>
+    <g opacity="0.8"><path d="M341,25 L433,78.1 L433,214.1 L341,161 Z" stroke="#2a4fb5"/></g>
+    <g opacity="0.8"><path d="M599,25 L691,78.1 L691,214.1 L599,161 Z" stroke="#2a4fb5"/></g>
+    <g opacity="1"><path d="M847.8,6.1 L958.2,69.8 L958.2,233 L847.8,169.3 Z" stroke="#7a5a1f"/></g>
+    <g opacity="0.8"><path d="M1115,25 L1207,78.1 L1207,214.1 L1115,161 Z" stroke="#2a4fb5"/></g>
+    </g>
+    <line x1="60" y1="112.6" x2="1220" y2="112.6" stroke="#7aa2f7" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>
+    <g fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="13">
+    <g opacity="0.8"><path d="M72,18 L164,71.1 L164,207.1 L72,154 Z" stroke="#7aa2f7"/></g>
+    <g opacity="0.8"><path d="M330,18 L422,71.1 L422,207.1 L330,154 Z" stroke="#7aa2f7"/></g>
+    <g opacity="0.8"><path d="M588,18 L680,71.1 L680,207.1 L588,154 Z" stroke="#7aa2f7"/></g>
+    <g opacity="1"><path d="M836.8,-0.9 L947.2,62.8 L947.2,226 L836.8,162.3 Z" stroke="#e0af68"/></g>
+    <g opacity="0.8"><path d="M1104,18 L1196,71.1 L1196,207.1 L1104,154 Z" stroke="#7aa2f7"/></g>
+    </g>
+    <polygon points="898,64.6 944.8,91.6 898,118.6 851.2,91.6" fill="url(#top)"/>
+    <polygon points="851.2,91.6 898,118.6 898,172.6 851.2,145.6" fill="url(#left)"/>
+    <polygon points="898,118.6 944.8,91.6 944.8,145.6 898,172.6" fill="url(#right)"/>
+    <!-- gates:end -->
+  </svg>
+
+  <div class="labels">
+    <!-- labels:start -->
+    <div class="layer" style="left:118px"><div class="name"><i></i>Link</div><div class="value">Ethernet</div></div>
+    <div class="layer" style="left:376px"><div class="name"><i></i>Router</div><div class="value">0.7 ms</div></div>
+    <div class="layer" style="left:634px"><div class="name"><i></i>Internet</div><div class="value">8.2 ms</div></div>
+    <div class="layer fault" style="left:892px"><div class="name"><i></i>DNS</div><div class="value">225 ms</div></div>
+    <div class="layer" style="left:1150px"><div class="name"><i></i>World</div><div class="value">8 regions</div></div>
+    <!-- labels:end -->
+  </div>
+</div>
+</body>
+</html>

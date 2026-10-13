@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src '__SCRIPT_HASH__'; style-src 'unsafe-inline'">
+<title>Packet</title>
+<style>
+/* UL glass: blue-black tint over the window's frosted backdrop, UL's MB Type faces with a system fallback. */
+:root {
+  --ui: "Concourse 3", "Concourse T3", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  --num: "Concourse 3 Tab", "Concourse T3 Tab", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  --caps: "Concourse 3 Caps", "Concourse C3", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  --mark: "Advocate 54 Wide Reg", "Advocate 54 Wide", "Advocate", -apple-system, BlinkMacSystemFont, sans-serif;
+  --brand: #0A4BC4; --brand-deep: #02349A; --brand-glow: rgba(2,52,154,.45);
+  --ink: #c9d3f5; --bright: #eef2ff; --muted: #7c87b2; --line: rgba(122,162,247,.14); --grid: rgba(122,162,247,.08);
+  --panel: #0d1328; --glass: linear-gradient(180deg, rgba(30,42,82,.40), rgba(12,18,38,.46));
+  --good: #9ece6a; --fair: #e0af68; --poor: #f7768e; --offline: #565f89;
+  --gw: #bb9af7; --edge: #7aa2f7; --dns: #7dcfff; --far: #ff9e64; --down: #7aa2f7; --up: #9ece6a;
+  --wifi: #9d7cd8; --eth: #3d59a1;
+  --shade-fair: rgba(224,175,104,.12); --shade-poor: rgba(247,118,142,.15); --shade-offline: rgba(86,95,137,.22);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; color: var(--ink); font: 13.5px/1.45 var(--ui); -webkit-font-smoothing: antialiased; }
+body { padding: 0 24px 24px; min-height: 100vh; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -2;
+  background:
+    radial-gradient(900px 420px at 12% -8%, rgba(10,75,196,.34), transparent 62%),
+    radial-gradient(700px 380px at 105% 110%, rgba(2,52,154,.26), transparent 60%),
+    linear-gradient(180deg, rgba(5,9,24,.80), rgba(3,6,16,.88)); }
+body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+  background-image: linear-gradient(rgba(122,162,247,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(122,162,247,.035) 1px, transparent 1px);
+  background-size: 32px 32px; -webkit-mask-image: linear-gradient(180deg, #000, transparent 55%); }
+header { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin: 0 -24px 16px; padding: 10px 24px 10px 88px; min-height: 52px; cursor: default; -webkit-user-select: none; user-select: none;
+  background: linear-gradient(180deg, rgba(6,10,26,.72), rgba(6,10,26,.38)); -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid var(--line); }
+h1 { margin: 0; display: flex; align-items: center; gap: 10px; font: 15px/1 var(--mark); letter-spacing: .22em; text-transform: uppercase; color: var(--bright); }
+h1 .node { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px rgba(10,75,196,.25), 0 0 14px rgba(10,75,196,.9); }
+#summary { color: var(--muted); flex: 1; min-width: 200px; font-size: 12.5px; }
+.seg { display: inline-flex; background: rgba(8,12,28,.55); border: 1px solid var(--line); border-radius: 10px; padding: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.03); }
+.seg button { border: 0; background: transparent; color: var(--muted); font: 12.5px var(--num); padding: 5px 13px; border-radius: 7px; cursor: pointer; transition: color .15s, background .15s; }
+.seg button:hover { color: var(--ink); }
+.seg button.on { background: linear-gradient(180deg, var(--brand), var(--brand-deep)); color: #fff; box-shadow: 0 0 0 1px rgba(122,162,247,.30), 0 4px 16px var(--brand-glow); }
+.glass, .card, .panel, .verdict, .side { background: var(--glass); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 32px rgba(0,0,0,.28); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.card { padding: 12px 14px; position: relative; overflow: hidden; }
+.card::before { content: ""; position: absolute; left: 14px; right: 14px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(122,162,247,.45), transparent); }
+.card .k, .side h3 { color: var(--muted); font: 11.5px var(--caps); text-transform: lowercase; font-variant-caps: all-small-caps; font-synthesis: none; letter-spacing: .09em; }
+.card .v { font: 700 24px/1.2 var(--num); margin-top: 4px; color: var(--bright); letter-spacing: -.01em; }
+.card .s { color: var(--muted); font-size: 12px; }
+.panel { padding: 12px 14px 8px; margin-bottom: 12px; position: relative; }
+.panel h2 { font: 11.5px var(--caps); text-transform: lowercase; font-variant-caps: all-small-caps; font-synthesis: none; letter-spacing: .09em; color: var(--ink); margin: 0 0 6px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.legend { display: inline-flex; gap: 14px; color: var(--muted); font: 12px var(--ui); letter-spacing: 0; text-transform: none; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; box-shadow: 0 0 6px currentColor; }
+canvas { display: block; width: 100%; }
+#tip { position: fixed; pointer-events: none; background: rgba(8,12,28,.92); border: 1px solid rgba(122,162,247,.22); border-radius: 10px; padding: 9px 11px; box-shadow: 0 10px 34px rgba(0,0,0,.45), 0 0 0 1px rgba(2,52,154,.25); font: 12px var(--num); display: none; min-width: 200px; z-index: 5; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+#tip b { display: block; margin-bottom: 5px; color: var(--bright); }
+#tip .r { display: flex; justify-content: space-between; gap: 14px; }
+#tip .r span:first-child { color: var(--muted); font-family: var(--ui); }
+#empty { display: none; text-align: center; color: var(--muted); padding: 60px 0; }
+#now { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; margin-bottom: 14px; }
+.verdict { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; }
+.verdict::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(420px 160px at 0% 0%, rgba(10,75,196,.22), transparent 70%); }
+.vhead { display: flex; gap: 14px; align-items: flex-start; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex: none; margin-top: 6px; box-shadow: 0 0 0 4px rgba(122,162,247,.10), 0 0 18px rgba(122,162,247,.35); }
+#v-sentence { font: 700 21px/1.3 var(--ui); color: var(--bright); letter-spacing: -.005em; }
+.layers { display: grid; gap: 7px; }
+.layer { display: grid; grid-template-columns: 80px 1fr; gap: 12px; align-items: baseline; font-family: var(--num); }
+.layer .lbl { color: var(--muted); font: 11.5px var(--caps); text-transform: lowercase; font-variant-caps: all-small-caps; font-synthesis: none; letter-spacing: .08em; display: flex; gap: 7px; align-items: center; }
+.layer .lbl i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px currentColor; }
+.side { padding: 16px 18px; display: flex; flex-direction: column; gap: 9px; }
+#regions { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; font: 12.5px var(--num); }
+#line, #quick, #measured { font: 12.5px var(--num); }
+#measured { color: var(--muted); }
+#test { align-self: flex-start; margin-top: 6px; border: 1px solid rgba(122,162,247,.35); border-radius: 10px; padding: 8px 16px; font: 700 13px var(--ui); letter-spacing: .01em;
+  background: linear-gradient(180deg, var(--brand), var(--brand-deep)); color: #fff; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 22px var(--brand-glow); transition: filter .15s, box-shadow .15s; }
+#test:hover { filter: brightness(1.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 8px 28px rgba(10,75,196,.6); }
+#test:disabled { opacity: .55; cursor: default; filter: none; }
+::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: rgba(122,162,247,.18); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+@media (max-width: 720px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } #now { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="node"></span>Packet</h1>
+  <div id="summary">Loading…</div>
+  <div class="seg" id="ranges">
+    <button data-r="1h">1 h</button><button data-r="24h" class="on">24 h</button><button data-r="7d">7 d</button><button data-r="30d">30 d</button>
+  </div>
+</header>
+<section id="now">
+  <div class="verdict">
+    <div class="vhead"><span class="dot" id="v-dot" style="background:var(--offline)"></span><div id="v-sentence">Measuring the first round…</div></div>
+    <div class="layers" id="layers"></div>
+    <div id="measured"></div>
+  </div>
+  <div class="side">
+    <h3>World</h3>
+    <div id="regions"></div>
+    <h3 style="margin-top:6px">Bandwidth</h3>
+    <div id="line"></div>
+    <div id="quick"></div>
+    <button id="test">Test Now (full capacity, about 15 s)</button>
+  </div>
+</section>
+<div class="cards">
+  <div class="card"><div class="k">Healthy</div><div class="v" id="c-health">—</div><div class="s" id="c-health-s"></div></div>
+  <div class="card"><div class="k">Internet latency</div><div class="v" id="c-edge">—</div><div class="s" id="c-edge-s"></div></div>
+  <div class="card"><div class="k">Bandwidth</div><div class="v" id="c-bw">—</div><div class="s" id="c-bw-s"></div></div>
+  <div class="card"><div class="k">Bad stretches</div><div class="v" id="c-bad">—</div><div class="s" id="c-bad-s"></div></div>
+</div>
+<div id="empty">No measurements in this range yet. Packet measures every minute.</div>
+<div id="charts">
+  <div class="panel"><h2>Verdict and link <span class="legend"><span><i style="background:var(--good)"></i>Healthy</span><span><i style="background:var(--fair)"></i>Struggling</span><span><i style="background:var(--poor)"></i>Bad</span><span><i style="background:var(--offline)"></i>Offline</span><span><i style="background:var(--eth)"></i>Ethernet</span><span><i style="background:var(--wifi)"></i>Wi-Fi</span></span></h2><canvas id="strip" data-h="46"></canvas></div>
+  <div class="panel"><h2>Latency <span class="legend"><span><i style="background:var(--gw)"></i>Router</span><span><i style="background:var(--edge)"></i>Internet</span><span><i style="background:var(--dns)"></i>DNS</span><span><i style="background:var(--far)"></i>World median</span></span></h2><canvas id="lat" data-h="210"></canvas></div>
+  <div class="panel"><h2>Packet loss</h2><canvas id="loss" data-h="90"></canvas></div>
+  <div class="panel"><h2>Bandwidth <span class="legend"><span><i style="background:var(--down)"></i>Download</span><span><i style="background:var(--up)"></i>Upload</span><span>● hourly Cloudflare test · ◉ Test Now (full capacity)</span></span></h2><canvas id="bw" data-h="150"></canvas></div>
+</div>
+<div id="tip"></div>
+<script>
+(function () {
+  var data = null, range = "24h", hover = null;
+  var css = getComputedStyle(document.documentElement);
+  function c(name) { return css.getPropertyValue(name).trim(); }
+  var levelColor = { good: "--good", fair: "--fair", poor: "--poor", offline: "--offline" };
+  var shade = { fair: "--shade-fair", poor: "--shade-poor", offline: "--shade-offline" };
+  var layerLabel = { none: "Nothing", wifi: "Wi-Fi", local: "Local network", isp: "Internet provider", dns: "DNS", far: "Far internet" };
+  var PAD_L = 46, PAD_R = 12, PAD_T = 6, PAD_B = 18;
+
+  function send(r) { window.ipc.postMessage(JSON.stringify({ type: "range", range: r })); }
+  function two(n) { return (n < 10 ? "0" : "") + n; }
+  function clock(t) { var d = new Date(t); return two(d.getHours()) + ":" + two(d.getMinutes()); }
+  var DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function stamp(t) {
+    var d = new Date(t);
+    return (range === "1h" || range === "24h") ? clock(t) : DAYS[d.getDay()] + " " + d.getDate() + " · " + clock(t);
+  }
+  function ms(v) { return v == null ? "—" : (v < 10 ? v.toFixed(1) : Math.round(v)) + " ms"; }
+  function median(a) { if (!a.length) return null; a = a.slice().sort(function (x, y) { return x - y; }); var m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; }
+  function dur(m) { return m < 60 ? Math.round(m) + " min" : (m / 60).toFixed(m < 600 ? 1 : 0) + " h"; }
+
+  function setup(id) {
+    var cv = document.getElementById(id), h = +cv.dataset.h, w = cv.clientWidth, dpr = window.devicePixelRatio || 1;
+    cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + "px";
+    var g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.font = '11px "Concourse 3 Tab", -apple-system, sans-serif'; g.textBaseline = "middle";
+    return { cv: cv, g: g, w: w, h: h, x0: PAD_L, x1: w - PAD_R, y0: PAD_T, y1: h - PAD_B };
+  }
+  function xOf(p, t) { return p.x0 + (t - data.from) / (data.to - data.from) * (p.x1 - p.x0); }
+  // The server sends the bucket width, so a sleep gap early in the range can't skew it.
+  function bucketW(p) { return Math.max(1.5, data.width / (data.to - data.from) * (p.x1 - p.x0)); }
+  function gapAfter(i) { var b = data.buckets; return i + 1 < b.length && b[i + 1].t - b[i].t > 1.5 * data.width; }
+
+  // One solid band per run of same-level buckets, so translucent fills never overlap into stripes.
+  function shadeBad(p) {
+    var bw = bucketW(p), b = data.buckets, i = 0;
+    while (i < b.length) {
+      var j = i;
+      while (j + 1 < b.length && b[j + 1].level === b[i].level && !gapAfter(j)) j++;
+      if (b[i].level !== "good") {
+        var x0 = Math.round(xOf(p, b[i].t) - bw / 2), x1 = Math.round(xOf(p, b[j].t) + bw / 2);
+        p.g.fillStyle = c(shade[b[i].level]); p.g.fillRect(x0, p.y0, Math.max(2, x1 - x0), p.y1 - p.y0);
+      }
+      i = j + 1;
+    }
+  }
+  function changes(p) {
+    p.g.save(); p.g.setLineDash([3, 3]); p.g.strokeStyle = c("--muted"); p.g.globalAlpha = .7;
+    data.changes.forEach(function (ch) { var x = Math.round(xOf(p, ch.t)) + .5; p.g.beginPath(); p.g.moveTo(x, p.y0); p.g.lineTo(x, p.y1); p.g.stroke(); });
+    p.g.restore();
+  }
+  function timeAxis(p) {
+    var g = p.g, n = Math.max(2, Math.floor((p.x1 - p.x0) / 110));
+    g.fillStyle = c("--muted"); g.textAlign = "center";
+    for (var i = 0; i <= n; i++) { var t = data.from + (data.to - data.from) * i / n; g.fillText(stamp(t), Math.min(Math.max(xOf(p, t), p.x0 + 24), p.x1 - 24), p.h - 7); }
+  }
+  function yGrid(p, ticks, yOf, fmt) {
+    var g = p.g; g.strokeStyle = c("--grid"); g.fillStyle = c("--muted"); g.textAlign = "right";
+    ticks.forEach(function (v) { var y = Math.round(yOf(v)) + .5; if (y < p.y0 - 1 || y > p.y1 + 1) return; g.beginPath(); g.moveTo(p.x0, y); g.lineTo(p.x1, y); g.stroke(); g.fillText(fmt(v), p.x0 - 6, y); });
+  }
+  function line(p, key, color, yOf) {
+    var g = p.g, on = false; g.strokeStyle = c(color); g.lineWidth = 1.8; g.lineJoin = "round"; g.shadowColor = c(color); g.shadowBlur = 7; g.beginPath();
+    // A gap with no measurements (asleep, app not running) breaks the line instead of bridging it.
+    data.buckets.forEach(function (b, i) {
+      var v = b[key]; if (v == null) { on = false; return; }
+      var x = xOf(p, b.t), y = yOf(v); if (on) g.lineTo(x, y); else g.moveTo(x, y); on = !gapAfter(i);
+    });
+    g.stroke(); g.lineWidth = 1; g.shadowBlur = 0;
+  }
+  function cursor(p) {
+    if (hover == null) return;
+    var x = Math.round(xOf(p, data.buckets[hover].t)) + .5;
+    p.g.strokeStyle = c("--ink"); p.g.globalAlpha = .35; p.g.beginPath(); p.g.moveTo(x, p.y0); p.g.lineTo(x, p.y1); p.g.stroke(); p.g.globalAlpha = 1;
+  }
+
+  function drawStrip() {
+    var p = setup("strip"), g = p.g, bw = bucketW(p), mid = p.y0 + 20;
+    g.fillStyle = c("--muted"); g.textAlign = "right"; g.fillText("Verdict", p.x0 - 6, p.y0 + 9); g.fillText("Link", p.x0 - 6, mid + 7);
+    data.buckets.forEach(function (b) {
+      var x = xOf(p, b.t) - bw / 2;
+      g.fillStyle = c(levelColor[b.level]); g.fillRect(x, p.y0, bw + 0.5, 18);
+      g.fillStyle = c(b.link === "wifi" ? "--wifi" : b.link === "ethernet" ? "--eth" : "--offline"); g.fillRect(x, mid + 3, bw + 0.5, 8);
+    });
+    changes(p); cursor(p);
+  }
+  function drawLatency() {
+    var p = setup("lat"), vals = [];
+    data.buckets.forEach(function (b) { ["gw", "edge", "dns", "far"].forEach(function (k) { if (b[k] != null) vals.push(b[k]); }); });
+    var hi = Math.max(10, Math.max.apply(null, vals.concat([1])) * 1.15), lo = 0.3;
+    var L0 = Math.log(lo), L1 = Math.log(hi);
+    function yOf(v) { return p.y1 - (Math.log(Math.max(v, lo)) - L0) / (L1 - L0) * (p.y1 - p.y0); }
+    shadeBad(p);
+    yGrid(p, [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000].filter(function (v) { return v <= hi; }), yOf, function (v) { return v + " ms"; });
+    changes(p);
+    line(p, "far", "--far", yOf); line(p, "dns", "--dns", yOf); line(p, "gw", "--gw", yOf); line(p, "edge", "--edge", yOf);
+    timeAxis(p); cursor(p);
+  }
+  function drawLoss() {
+    var p = setup("loss"), g = p.g, bw = bucketW(p);
+    var hi = Math.max(0.05, Math.max.apply(null, data.buckets.map(function (b) { return b.loss || 0; }).concat([0])) * 1.2);
+    function yOf(v) { return p.y1 - v / hi * (p.y1 - p.y0); }
+    shadeBad(p);
+    yGrid(p, [0, hi / 2, hi].map(function (v) { return Math.round(v * 100) / 100; }), yOf, function (v) { return Math.round(v * 100) + "%"; });
+    data.buckets.forEach(function (b) {
+      if (!b.loss) return;
+      g.fillStyle = c(b.loss >= .1 ? "--poor" : b.loss >= .02 ? "--fair" : "--muted");
+      var y = yOf(b.loss); g.fillRect(xOf(p, b.t) - Math.max(1, bw * .35), y, Math.max(2, bw * .7), p.y1 - y);
+    });
+    changes(p); timeAxis(p); cursor(p);
+  }
+  function drawBandwidth() {
+    var p = setup("bw"), g = p.g, pts = data.bandwidth;
+    var hi = Math.max(10, Math.max.apply(null, pts.map(function (b) { return Math.max(b.down || 0, b.up || 0); }).concat([0])) * 1.15);
+    function yOf(v) { return p.y1 - v / hi * (p.y1 - p.y0); }
+    shadeBad(p);
+    var raw = hi / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), ticks = [];
+    var step = [1, 2, 2.5, 5, 10].map(function (k) { return k * mag; }).filter(function (s) { return s >= raw; })[0];
+    for (var v = 0; v <= hi; v += step) ticks.push(v);
+    yGrid(p, ticks, yOf, function (v) { return v >= 1000 ? (v / 1000) + " G" : v + " M"; });
+    changes(p);
+    ["down", "up"].forEach(function (k) {
+      g.strokeStyle = c("--" + k); g.globalAlpha = .55; g.lineWidth = 1.2; g.beginPath(); var on = false;
+      pts.forEach(function (b) { if (b[k] == null || b.trigger === "manual") return; var x = xOf(p, b.t), y = yOf(b[k]); if (on) g.lineTo(x, y); else g.moveTo(x, y); on = true; });
+      g.stroke(); g.globalAlpha = 1; g.lineWidth = 1;
+      pts.forEach(function (b) {
+        if (b[k] == null) return; var x = xOf(p, b.t), y = yOf(b[k]), full = b.trigger === "manual";
+        g.fillStyle = c("--" + k); g.beginPath(); g.arc(x, y, full ? 4 : 2.2, 0, 7); g.fill();
+        if (full) { g.strokeStyle = c("--panel"); g.lineWidth = 1.5; g.stroke(); g.lineWidth = 1; }
+      });
+    });
+    if (!pts.length) { g.fillStyle = c("--muted"); g.textAlign = "center"; g.fillText("No full bandwidth tests in this range yet (one runs every hour)", (p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2); }
+    timeAxis(p); cursor(p);
+  }
+
+  function cards() {
+    var b = data.buckets, n = data.rounds, bad = data.bad_rounds;
+    document.getElementById("c-health").textContent = n ? (100 * (n - bad) / n).toFixed(n - bad === n ? 0 : 1) + "%" : "—";
+    document.getElementById("c-health-s").textContent = n + " measurements";
+    var edges = b.map(function (x) { return x.edge; }).filter(function (v) { return v != null; });
+    document.getElementById("c-edge").textContent = ms(median(edges));
+    document.getElementById("c-edge-s").textContent = edges.length ? "worst " + ms(Math.max.apply(null, edges)) + " (bucket average)" : "";
+    var manual = data.bandwidth.filter(function (x) { return x.trigger === "manual" && (x.down != null || x.up != null); });
+    var hourly = data.bandwidth.filter(function (x) { return x.trigger !== "manual"; });
+    var bwv = document.getElementById("c-bw"), bws = document.getElementById("c-bw-s");
+    if (manual.length) {
+      var m = manual[manual.length - 1];
+      bwv.textContent = "⬇ " + Math.round(m.down || 0) + " ⬆ " + Math.round(m.up || 0);
+      bws.textContent = "Mbps capacity, Test Now " + stamp(m.t);
+    } else if (hourly.length) {
+      var d = median(hourly.map(function (x) { return x.down; }).filter(function (v) { return v != null; }));
+      var u = median(hourly.map(function (x) { return x.up; }).filter(function (v) { return v != null; }));
+      bwv.textContent = "⬇ " + Math.round(d || 0) + " ⬆ " + Math.round(u || 0);
+      bws.textContent = "Mbps to Cloudflare, " + (hourly.length === 1 ? "1 hourly test" : "median of " + hourly.length + " hourly tests");
+    } else { bwv.textContent = "—"; bws.textContent = "no tests yet: use Test Now"; }
+    var runs = [], cur = null;
+    b.forEach(function (x) {
+      if (x.level !== "good" && cur && x.t - cur.end > 1.5 * data.width) { runs.push(cur); cur = null; }
+      if (x.level !== "good") { if (!cur) cur = { start: x.t, end: x.t, layers: {} }; cur.end = x.t; cur.layers[x.layer] = 1; }
+      else if (cur) { runs.push(cur); cur = null; }
+    });
+    if (cur) runs.push(cur);
+    var width = data.width / 60000;
+    var longest = runs.reduce(function (m, r) { return Math.max(m, (r.end - r.start) / 60000 + width); }, 0);
+    document.getElementById("c-bad").textContent = runs.length;
+    document.getElementById("c-bad-s").textContent = runs.length ? "longest " + dur(longest) : "none in this range";
+    var last = b[b.length - 1];
+    document.getElementById("summary").textContent = !last ? "No data yet" :
+      "Most recent: " + (last.level === "good" ? "healthy" : layerLabel[last.layer] + " " + last.level) + " · " + data.changes.length + " link change" + (data.changes.length === 1 ? "" : "s") + " in range";
+  }
+
+  function draw() {
+    if (!data) return;
+    var empty = !data.buckets.length;
+    document.getElementById("empty").style.display = empty ? "block" : "none";
+    document.getElementById("charts").style.display = empty ? "none" : "block";
+    cards();
+    if (empty) return;
+    drawStrip(); drawLatency(); drawLoss(); drawBandwidth();
+  }
+
+  function nearestBW(t) {
+    var best = null; data.bandwidth.forEach(function (b) { if (Math.abs(b.t - t) < 15 * 60000 && (!best || Math.abs(b.t - t) < Math.abs(best.t - t))) best = b; }); return best;
+  }
+  function onMove(ev) {
+    if (!data || !data.buckets.length) return;
+    var cv = ev.currentTarget, r = cv.getBoundingClientRect(), x = ev.clientX - r.left;
+    var t = data.from + (x - PAD_L) / (r.width - PAD_L - PAD_R) * (data.to - data.from), bi = 0, bd = Infinity;
+    data.buckets.forEach(function (b, i) { var d = Math.abs(b.t - t); if (d < bd) { bd = d; bi = i; } });
+    hover = bi; draw();
+    var b = data.buckets[bi], bwp = nearestBW(b.t), tip = document.getElementById("tip");
+    var rows = [["Verdict", b.level === "good" ? "Healthy" : layerLabel[b.layer] + " · " + b.level], ["Link", b.link === "wifi" ? "Wi-Fi" + (b.rssi != null ? " " + Math.round(b.rssi) + " dBm" : "") : b.link === "ethernet" ? "Ethernet" : b.link],
+      ["Router", ms(b.gw)], ["Internet", ms(b.edge)], ["DNS", ms(b.dns)], ["World median", ms(b.far)], ["Loss (worst)", Math.round((b.loss || 0) * 100) + "%"]];
+    if (bwp) rows.push([bwp.trigger === "manual" ? "Capacity" : "Cloudflare", "⬇ " + (bwp.down == null ? "—" : Math.round(bwp.down)) + " ⬆ " + (bwp.up == null ? "—" : Math.round(bwp.up)) + " Mbps"]);
+    if (bwp && bwp.rpm != null) rows.push(["Responsiveness", Math.round(bwp.rpm) + " RPM"]);
+    tip.innerHTML = "";
+    var head = document.createElement("b"); head.textContent = stamp(b.t) + (b.n > 1 ? " · " + b.n + " rounds" : ""); tip.appendChild(head);
+    rows.forEach(function (row) { var d = document.createElement("div"); d.className = "r"; var a = document.createElement("span"); a.textContent = row[0]; var v = document.createElement("span"); v.textContent = row[1]; d.appendChild(a); d.appendChild(v); tip.appendChild(d); });
+    tip.style.display = "block";
+    var tx = ev.clientX + 16, ty = ev.clientY + 12;
+    if (tx + tip.offsetWidth > window.innerWidth - 8) tx = ev.clientX - tip.offsetWidth - 16;
+    if (ty + tip.offsetHeight > window.innerHeight - 8) ty = window.innerHeight - tip.offsetHeight - 8;
+    tip.style.left = tx + "px"; tip.style.top = ty + "px";
+  }
+  function onLeave() { hover = null; document.getElementById("tip").style.display = "none"; draw(); }
+
+  ["strip", "lat", "loss", "bw"].forEach(function (id) { var cv = document.getElementById(id); cv.addEventListener("mousemove", onMove); cv.addEventListener("mouseleave", onLeave); });
+  document.getElementById("ranges").addEventListener("click", function (ev) {
+    var r = ev.target && ev.target.dataset && ev.target.dataset.r; if (!r) return;
+    range = r; Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.classList.toggle("on", b.dataset.r === r); });
+    send(r);
+  });
+  window.addEventListener("resize", draw);
+  // The title bar is hidden; a press on the header strip (outside its buttons) moves the window.
+  document.querySelector("header").addEventListener("mousedown", function (ev) {
+    if (ev.button === 0 && !(ev.target.closest && ev.target.closest("button"))) window.ipc.postMessage(JSON.stringify({ type: "drag" }));
+  });
+  // Charts read colours and fonts at draw time; redraw once the UL faces have loaded.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+  // The current state, pushed by the app after every round.
+  window.now = function (d) {
+    if (!d) return;
+    document.getElementById("v-dot").style.background = c(levelColor[d.level] || "--offline");
+    document.getElementById("v-sentence").textContent = d.sentence;
+    var layers = document.getElementById("layers"); layers.textContent = "";
+    d.rows.forEach(function (r) {
+      var row = document.createElement("div"); row.className = "layer";
+      var lbl = document.createElement("span"); lbl.className = "lbl";
+      var dot = document.createElement("i"); dot.style.background = c(levelColor[r.level] || "--offline");
+      lbl.appendChild(dot); lbl.appendChild(document.createTextNode(r.label));
+      var txt = document.createElement("span"); txt.textContent = r.text.replace(/^(Internet · |World · |DNS lookups )/, "");
+      row.appendChild(lbl); row.appendChild(txt); layers.appendChild(row);
+    });
+    var regions = document.getElementById("regions"); regions.textContent = "";
+    d.regions.forEach(function (t) { var e = document.createElement("div"); e.textContent = t; regions.appendChild(e); });
+    document.getElementById("line").textContent = d.line;
+    document.getElementById("quick").textContent = d.quick;
+    document.getElementById("measured").textContent = d.measured;
+    var b = document.getElementById("test");
+    b.disabled = !!d.testing; b.textContent = d.testing ? "Testing bandwidth…" : "Test Now (full capacity, about 15 s)";
+  };
+  document.getElementById("test").addEventListener("click", function () {
+    var b = document.getElementById("test"); b.disabled = true; b.textContent = "Testing bandwidth…";
+    window.ipc.postMessage(JSON.stringify({ type: "test" }));
+  });
+  window.render = function (d) { if (!d) return; if (d.range !== range) return; data = d; hover = null; draw(); };
+  send(range);
+})();
+</script>
+</body>
+</html>
