@@ -120,16 +120,20 @@ mod tests {
 
     /// Fills a store with a made-up day for screenshots and UI work: a DNS stall, an evening on
     /// weak Wi-Fi, and an hour of provider trouble. Every number is synthetic.
-    /// `PACKET_DATA_DIR=/tmp/packet-demo cargo test -- --ignored write_demo_store`
+    /// `PACKET_DATA_DIR=$(mktemp -d) cargo test -- --ignored write_demo_store`
     #[test]
     #[ignore]
     fn write_demo_store() {
         use crate::probe::{Bandwidth, LinkKind, Trigger, WiFi};
         use crate::round::Layer;
-        let dir = std::env::var("PACKET_DATA_DIR").expect("set PACKET_DATA_DIR to an empty scratch directory");
-        assert!(!dir.contains("Application Support"), "refusing to write demo data into the real store");
-        let path = std::path::Path::new(&dir).join("packet.sqlite");
-        let _ = std::fs::remove_file(&path);
+        let dir = std::env::var("PACKET_DATA_DIR").expect("set PACKET_DATA_DIR to a new empty directory, such as $(mktemp -d)");
+        // Links are resolved first, so a directory that leads to the real store is refused, and
+        // nothing is ever deleted: the directory has to be empty.
+        let dir = std::fs::canonicalize(&dir).expect("PACKET_DATA_DIR exists");
+        let real = std::env::var_os("HOME").and_then(|h| std::fs::canonicalize(std::path::Path::new(&h).join("Library/Application Support/Packet")).ok());
+        assert!(real.is_none_or(|r| !dir.starts_with(r)), "refusing to write demo data into the real store");
+        assert!(std::fs::read_dir(&dir).unwrap().next().is_none(), "PACKET_DATA_DIR must be an empty directory");
+        let path = dir.join("packet.sqlite");
         let c = store::open_at(&path).unwrap();
         let now = crate::time::now_ms();
         let mut seed: u64 = 0x5eed;

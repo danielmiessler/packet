@@ -133,9 +133,10 @@ Data lives in `~/Library/Application Support/Packet/packet.sqlite` and is kept f
 ```sh
 cargo test                     # the full suite
 make probes                    # live checks against the running app; needs bun, rg, jq and sqlite3
-PACKET_DATA_DIR=/tmp/packet-demo cargo test -- --ignored write_demo_store
+demo=$(mktemp -d)              # a new private directory for a synthetic store
+PACKET_DATA_DIR=$demo cargo test -- --ignored write_demo_store
                                # a synthetic day of data for UI work and screenshots
-PACKET_DATA_DIR=/tmp/packet-demo packet history --range 24h
+PACKET_DATA_DIR=$demo packet history --range 24h
 ```
 
 `PACKET_DATA_DIR` points Packet at a different store, so you never have to touch your real history. The app icon and menu-bar glyph are authored SVG: `bun design/icon/gen.ts` regenerates both, and `make glyphs` re-renders the coloured glyphs. The social card is `design/social/card.html`, with its gate row written by `bun design/social/gen.ts`.

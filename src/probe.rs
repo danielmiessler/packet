@@ -345,8 +345,15 @@ pub fn dns_query(id: u16, name: &str) -> Vec<u8> {
 }
 
 /// Our reply: Some(true) answered, Some(false) the resolver refused or failed, None not ours.
-pub fn dns_reply(buf: &[u8], id: u16) -> Option<bool> {
-    (buf.len() >= 12 && u16::from_be_bytes([buf[0], buf[1]]) == id && buf[2] & 0x80 != 0).then(|| buf[3] & 0x0f == 0)
+/// Ours means a standard-query response with our ID that repeats our question.
+pub fn dns_reply(buf: &[u8], query: &[u8]) -> Option<bool> {
+    let ours = buf.len() >= query.len()
+        && buf[..2] == query[..2]
+        && buf[2] & 0x80 != 0
+        && buf[2] & 0x78 == 0
+        && buf[4..6] == query[4..6]
+        && buf[12..query.len()] == query[12..];
+    ours.then(|| buf[3] & 0x0f == 0)
 }
 
 /// Time for the system's resolver to answer a lookup, sent straight to it so the local cache is skipped.
@@ -358,15 +365,17 @@ pub fn dns_ms(round: u64) -> Option<f64> {
         let t = Instant::now();
         return resolve_v4(name, Duration::from_secs(2)).map(|_| t.elapsed().as_secs_f64() * 1000.0);
     };
+    // Connected, so only the resolver's address can answer; a random ID, so nobody can guess it.
     let sock = UdpSocket::bind("0.0.0.0:0").ok()?;
+    sock.connect((IpAddr::V4(server), 53)).ok()?;
     sock.set_read_timeout(Some(Duration::from_secs(2))).ok()?;
-    let id = (token()[7] as u16) << 8 | token()[6] as u16;
+    let query = dns_query(unsafe { libc::arc4random() } as u16, name);
     let t = Instant::now();
-    sock.send_to(&dns_query(id, name), (IpAddr::V4(server), 53)).ok()?;
+    sock.send(&query).ok()?;
     let mut buf = [0u8; 1500];
     loop {
-        let (n, _) = sock.recv_from(&mut buf).ok()?;
-        match dns_reply(&buf[..n], id) {
+        let n = sock.recv(&mut buf).ok()?;
+        match dns_reply(&buf[..n], &query) {
             Some(true) => return Some(t.elapsed().as_secs_f64() * 1000.0),
             Some(false) => return None,
             None => {}
@@ -385,10 +394,29 @@ pub fn parse_colo(trace: &str) -> Option<String> {
         .filter(|c| (2..=5).contains(&c.len()) && c.chars().all(|ch| ch.is_ascii_alphanumeric()))
 }
 
+/// The trace page is a few hundred bytes; reading at most this much keeps a hostile endpoint
+/// from filling memory.
+const TRACE_CAP: u64 = 4096;
+
+fn capped(r: impl std::io::Read) -> Vec<u8> {
+    use std::io::Read;
+    let mut body = Vec::new();
+    let _ = r.take(TRACE_CAP).read_to_end(&mut body);
+    body
+}
+
 /// The Cloudflare data center answering for this connection.
 pub fn edge_colo() -> Option<String> {
-    let out = Command::new(CURL).args(["-q", "-s", "--max-time", "3", TRACE_URL]).stderr(Stdio::null()).output().ok()?;
-    parse_colo(&String::from_utf8_lossy(&out.stdout))
+    let mut child = Command::new(CURL)
+        .args(["-q", "-s", "--max-time", "3", TRACE_URL])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let body = child.stdout.take().map(capped).unwrap_or_default();
+    let _ = child.kill();
+    let _ = child.wait();
+    parse_colo(&String::from_utf8_lossy(&body))
 }
 
 // ---------- bandwidth ----------
@@ -714,12 +742,27 @@ mod tests {
         assert_eq!(&q[12..], &[6, b'g', b'i', b't', b'h', b'u', b'b', 3, b'c', b'o', b'm', 0, 0, 1, 0, 1]);
         let mut r = q.clone();
         r[2] |= 0x80;
-        assert_eq!(dns_reply(&r, 0xabcd), Some(true));
-        assert_eq!(dns_reply(&r, 0xabce), None);
-        assert_eq!(dns_reply(&q, 0xabcd), None, "our own query is not a reply");
+        assert_eq!(dns_reply(&r, &q), Some(true));
+        let mut other = q.clone();
+        other[1] ^= 1;
+        assert_eq!(dns_reply(&r, &other), None, "another ID is not ours");
+        assert_eq!(dns_reply(&q, &q), None, "our own query is not a reply");
+        let mut forged = r.clone();
+        forged[13] = b'x';
+        assert_eq!(dns_reply(&forged, &q), None, "an answer to another question is not ours");
+        assert_eq!(dns_reply(&r[..12], &q), None, "a bare header is not ours");
+        let mut notify = r.clone();
+        notify[2] |= 0x20;
+        assert_eq!(dns_reply(&notify, &q), None, "another opcode is not ours");
         r[3] = 0x02; // SERVFAIL
-        assert_eq!(dns_reply(&r, 0xabcd), Some(false));
+        assert_eq!(dns_reply(&r, &q), Some(false));
         assert_eq!(parse_resolver("# x\nnameserver fe80::1\nnameserver 192.168.1.1\n"), Some(Ipv4Addr::new(192, 168, 1, 1)));
+    }
+
+    #[test]
+    fn trace_read_is_capped() {
+        assert_eq!(capped(std::io::repeat(b'x')).len() as u64, TRACE_CAP);
+        assert_eq!(capped(&b"colo=SJC\n"[..]), b"colo=SJC\n");
     }
 
     #[test]

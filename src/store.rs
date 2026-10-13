@@ -26,14 +26,34 @@ pub fn data_dir() -> PathBuf {
     PathBuf::from(home).join("Library/Application Support/Packet")
 }
 
+/// Creates the data directory if needed and makes it owner-only: the history is nobody else's
+/// business on a shared Mac.
+pub fn private_dir(dir: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::create_dir_all(dir)?;
+    std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))
+}
+
 pub fn open() -> rusqlite::Result<Connection> {
     let dir = data_dir();
-    std::fs::create_dir_all(&dir).expect("create data dir");
+    private_dir(&dir).expect("create data dir");
     open_at(&dir.join("packet.sqlite"))
+}
+
+/// The database and its WAL files are owner-only. SQLite gives new WAL files the database's mode,
+/// so setting it here covers installs made before this rule too.
+fn owner_only(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    for suffix in ["", "-wal", "-shm"] {
+        let mut p = path.as_os_str().to_owned();
+        p.push(suffix);
+        let _ = std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o600));
+    }
 }
 
 pub fn open_at(path: &Path) -> rusqlite::Result<Connection> {
     let c = Connection::open(path)?;
+    owner_only(path);
     c.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=2000;")?;
     let version: i64 = c.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     if version < SCHEMA_VERSION {
@@ -352,5 +372,29 @@ mod tests {
         }
         prune(&c, now).unwrap();
         assert_eq!(rounds_between(&c, 0, now).unwrap().len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod permission_tests {
+    #[test]
+    fn store_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        let dir = std::env::temp_dir().join(format!("packet-perm-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let path = dir.join("packet.sqlite");
+        std::fs::write(&path, b"").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        super::private_dir(&dir).unwrap();
+        let c = super::open_at(&path).unwrap();
+        let wal = dir.join("packet.sqlite-wal");
+        let (d, f, w) = (mode(&dir), mode(&path), wal.exists().then(|| mode(&wal)));
+        drop(c);
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(d, 0o700, "data directory");
+        assert_eq!(f, 0o600, "an existing store is tightened");
+        assert!(w.is_none_or(|w| w == 0o600), "WAL file");
     }
 }

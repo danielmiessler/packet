@@ -23,15 +23,21 @@ pub fn set_hourly(on: bool) -> std::io::Result<()> {
 }
 
 fn hourly_enabled_in(dir: &Path) -> bool {
-    dir.join(HOURLY_MARKER).exists()
+    std::fs::symlink_metadata(dir.join(HOURLY_MARKER)).is_ok_and(|m| m.is_file())
 }
 
 fn set_hourly_in(dir: &Path, on: bool) -> std::io::Result<()> {
     let path = dir.join(HOURLY_MARKER);
     if on {
-        std::fs::create_dir_all(dir)?;
-        std::fs::write(path, b"on\n")
-    } else if path.exists() {
+        use std::io::Write;
+        store::private_dir(dir)?;
+        // Whatever sits at the marker's name is replaced, never written through, so a planted
+        // link cannot aim the write at another file.
+        if std::fs::symlink_metadata(&path).is_ok() {
+            std::fs::remove_file(&path)?;
+        }
+        std::fs::OpenOptions::new().write(true).create_new(true).open(&path)?.write_all(b"on\n")
+    } else if std::fs::symlink_metadata(&path).is_ok() {
         std::fs::remove_file(path)
     } else {
         Ok(())
@@ -117,6 +123,23 @@ mod tests {
         assert!(!hourly_enabled_in(&dir));
         set_hourly_in(&dir, false).unwrap();
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn hourly_marker_ignores_links() {
+        let dir = std::env::temp_dir().join(format!("packet-link-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("target");
+        std::fs::write(&target, b"keep").unwrap();
+        std::os::unix::fs::symlink(&target, dir.join(HOURLY_MARKER)).unwrap();
+        let planted = hourly_enabled_in(&dir);
+        set_hourly_in(&dir, true).unwrap();
+        let kept = std::fs::read(&target).unwrap();
+        let is_file = std::fs::symlink_metadata(dir.join(HOURLY_MARKER)).unwrap().is_file();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(!planted, "a planted link does not turn the hourly test on");
+        assert_eq!(kept, b"keep", "the link's target is untouched");
+        assert!(is_file, "the marker is a plain file");
     }
 
     #[test]
